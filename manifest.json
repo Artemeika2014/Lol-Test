@@ -1,0 +1,21 @@
+{
+  "name": "LOL Messenger",
+  "short_name": "LOL Chat",
+  "description": "Мессенджер с пушами и стикерами",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070a10",
+  "theme_color": "#2b86ff",
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo192.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
