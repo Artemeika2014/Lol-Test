@@ -1755,49 +1755,57 @@ async function sendMessage() {
   await db.collection("chats").doc(currentChatId).set({ lastText: text, lastTime: now() }, { merge: true });
   await clearMyTyping();
   
-  // Отправка пуша собеседнику
-// Отправка пуша через OneSignal
-// Отправка пуша через OneSignal (с закодированным ключом)
-// Отправка пуша через OneSignal
-if (!currentChatIsGroup && peer && peer.uid) {
-  try {
-    const userDoc = await db.collection('users').doc(peer.uid).get();
-    const userData = userDoc.data();
-    if (userData.pushEnabled) {
-      console.log('📨 Отправка пуша пользователю:', peer.uid);
+  // ========================================================================
+  // ОТПРАВКА ПУША
+  // ========================================================================
+  if (!currentChatIsGroup && peer && peer.uid) {
+    try {
+      const userDoc = await db.collection('users').doc(peer.uid).get();
+      const userData = userDoc.data();
+      const peerPushEnabled = userData?.pushEnabled === true;
       
-      const ONESIGNAL_KEY = atob('b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=');
-      
-      const res = await fetch('https://api.onesignal.com/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + ONESIGNAL_KEY
-        },
-        body: JSON.stringify({
-          app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
-          include_external_user_ids: [peer.uid],
-          headings: { en: me.nick || 'Новое сообщение' },
-          contents: { en: text || 'Сообщение' },
-          data: {
-            chatId: currentChatId,
-            senderId: me.uid,
-            senderName: me.nick
-          }
-        })
-      });
-      
-      if (res.ok) {
-        console.log('✅ Пуш отправлен');
+      if (peerPushEnabled) {
+        console.log('📨 Отправка пуша пользователю:', peer.uid);
+        
+        const ONESIGNAL_KEY = atob('b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=');
+        
+        const response = await fetch('https://api.onesignal.com/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + ONESIGNAL_KEY
+          },
+          body: JSON.stringify({
+            app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
+            include_external_user_ids: [peer.uid],
+            headings: {
+              en: me.nick || 'Новое сообщение'
+            },
+            contents: {
+              en: text || 'Сообщение'
+            },
+            data: {
+              chatId: currentChatId,
+              senderId: me.uid,
+              senderName: me.nick
+            }
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          console.log('✅ Пуш отправлен через OneSignal');
+        } else {
+          console.error('❌ Ошибка OneSignal:', result);
+        }
       } else {
-        const err = await res.json();
-        console.error('❌ Ошибка:', err);
+        console.log('🔇 У пользователя выключены пуши');
       }
+    } catch (e) {
+      console.error('❌ Ошибка отправки пуша:', e);
     }
-  } catch (e) {
-    console.error('Ошибка отправки пуша:', e);
   }
-}
 }
 
 $("sendBtn").addEventListener("click", sendMessage);
@@ -3894,10 +3902,9 @@ function openAdvancedStickerEditor(imageDataUrl) {
 }
 
 // ========================================================================
-// PUSH УВЕДОМЛЕНИЯ
+// PUSH УВЕДОМЛЕНИЯ (UI)
 // ========================================================================
 
-// Проверка, установлено ли PWA
 function isPWAInstalled() {
   if (window.matchMedia('(display-mode: standalone)').matches) return true;
   if (window.navigator.standalone === true) return true;
@@ -3905,12 +3912,10 @@ function isPWAInstalled() {
   return false;
 }
 
-// Проверка поддержки push
 function isPushSupported() {
   return 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
 }
 
-// Проверка статуса подписки
 async function getPushSubscriptionStatus() {
   try {
     if (!isPushSupported() || !me) return false;
@@ -3922,7 +3927,6 @@ async function getPushSubscriptionStatus() {
   }
 }
 
-// Обновление UI тумблера
 async function updatePushUI() {
   if (!me) return;
 
@@ -3966,166 +3970,11 @@ async function updatePushUI() {
   }
 }
 
-// Подписка на пуши (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-async function subscribeToPush() {
-  try {
-    if (!isPushSupported()) {
-      showToast('❌ Браузер не поддерживает уведомления', 'error');
-      return false;
-    }
-
-    // Проверяем, есть ли уже разрешение
-    if (Notification.permission === 'denied') {
-      showToast('❌ Уведомления заблокированы в настройках браузера', 'error');
-      return false;
-    }
-
-    let permission = Notification.permission;
-    if (permission !== 'granted') {
-      permission = await Notification.requestPermission();
-    }
-    
-    if (permission !== 'granted') {
-      showToast('❌ Разрешение не получено', 'error');
-      return false;
-    }
-
-    // Регистрируем Service Worker
-    let registration;
-    try {
-      const swPath = '/Lol-Test/firebase-messaging-sw.js';
-      registration = await navigator.serviceWorker.register(swPath, {
-        scope: '/Lol-Test/'
-      });
-      console.log('✅ SW зарегистрирован по пути:', swPath);
-    } catch (swError) {
-      console.error('Ошибка регистрации SW:', swError);
-      showToast('❌ Ошибка регистрации Service Worker', 'error');
-      return false;
-    }
-
-    await navigator.serviceWorker.ready;
-
-    const vapidKey = firebaseConfig.vapidKey;
-
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: vapidKey
-    });
-
-    console.log('✅ Подписка создана:', subscription);
-
-    // Проверяем, есть ли ключи
-    const keys = subscription.keys || { p256dh: '', auth: '' };
-
-    const subscriptionData = {
-      endpoint: subscription.endpoint || '',
-      expirationTime: subscription.expirationTime || null,
-      keys: {
-        p256dh: keys.p256dh || '',
-        auth: keys.auth || ''
-      }
-    };
-
-    await db.collection('users').doc(me.uid).set({
-      pushSubscription: subscriptionData,
-      pushEnabled: true,
-      pushUpdatedAt: now()
-    }, { merge: true });
-
-    // 🔥 ПРИВЯЗЫВАЕМ EXTERNAL ID ДЛЯ ONESIGNAL
-    try {
-      const token = subscription.endpoint.split('/').pop();
-      const encodedKey = 'b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=';
-      const ONESIGNAL_KEY = atob(encodedKey);
-      
-      await fetch('https://api.onesignal.com/apps/f55c1b55-b383-4008-8072-8ba4382c6dac/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + ONESIGNAL_KEY
-        },
-        body: JSON.stringify({
-          subscriptions: [
-            {
-              type: 'WebPush',
-              token: token,
-              enabled: true
-            }
-          ],
-          properties: {
-            external_user_id: me.uid
-          }
-        })
-      });
-      console.log('✅ External ID привязан в OneSignal');
-    } catch (e) {
-      console.error('⚠️ Ошибка привязки OneSignal:', e);
-      // Не прерываем выполнение
-    }
-
-    showToast('✅ Уведомления включены!', 'success');
-    await updatePushUI();
-    return true;
-
-  } catch (error) {
-    console.error('Ошибка подписки:', error);
-    showToast('❌ Ошибка: ' + error.message, 'error');
-    return false;
-  }
-}
-
-// Отписка от пушей
-async function unsubscribeFromPush() {
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (sub) {
-      await sub.unsubscribe();
-    }
-
-    await db.collection('users').doc(me.uid).set({
-      pushSubscription: null,
-      pushEnabled: false,
-      pushUpdatedAt: now()
-    }, { merge: true });
-
-    showToast('🔇 Уведомления отключены', 'info');
-    await updatePushUI();
-    return true;
-  } catch (error) {
-    console.error('Ошибка отписки:', error);
-    showToast('❌ Ошибка: ' + error.message, 'error');
-    return false;
-  }
-}
-
-// Проверка статуса подписки
 async function checkPushStatus() {
   try {
     const isSubscribed = await getPushSubscriptionStatus();
     return isSubscribed;
   } catch (e) {
-    return false;
-  }
-}
-
-// Проверка Service Worker при загрузке
-async function checkServiceWorker() {
-  try {
-    const swPath = '/Lol-Test/firebase-messaging-sw.js';
-    const registration = await navigator.serviceWorker.getRegistration(swPath);
-    
-    if (registration) {
-      console.log('✅ SW активен:', registration.active ? 'Активен' : 'Не активен');
-      return true;
-    } else {
-      console.log('⚠️ SW не найден, пробуем зарегистрировать...');
-      await navigator.serviceWorker.register(swPath);
-      return true;
-    }
-  } catch (e) {
-    console.error('❌ Ошибка проверки SW:', e);
     return false;
   }
 }
@@ -4144,16 +3993,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Вызываем при загрузке
 setTimeout(async () => {
   if (me) {
-    await checkServiceWorker();
     await checkPushStatus();
     await updatePushUI();
   }
 }, 3000);
 
-// Слушаем изменения display-mode
 window.matchMedia('(display-mode: standalone)').addEventListener('change', updatePushUI);
 
 // ========================================================================
@@ -4173,7 +4019,6 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
       setMsg($("authMsg"), "Ошибка восстановления сессии. Войдите заново.", "err"); }
   } else { setAuthMode("login"); }
 
-  // Modal close handlers
   const modals = ['muteModal', 'giftModal', 'creatorGiftModal', 'createPromoModal', 'addItemModal', 'editItemModal', 'addBalanceModal', 'musicPickerModal', 'editTrackModal', 'contactEditorModal', 'addMemberModal'];
   modals.forEach(id => {
     const el = $(id);
@@ -4187,357 +4032,4 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
   document.getElementById('editTrackModal').addEventListener('click', function(e) {
     if (e.target === this) closeEditTrackModal();
   });
-  // ========================================================================
-// ПОДПИСКА НА ПУШИ (РАБОЧАЯ ВЕРСИЯ)
-// ========================================================================
-
-async function subscribeToPush() {
-  try {
-    showToast('⏳ Подписка...', 'info');
-    
-    // 1. Проверяем поддержку
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-      showToast('❌ Браузер не поддерживает уведомления', 'error');
-      return false;
-    }
-    
-    // 2. Запрашиваем разрешение
-    let permission = Notification.permission;
-    if (permission !== 'granted') {
-      permission = await Notification.requestPermission();
-    }
-    
-    if (permission !== 'granted') {
-      showToast('❌ Разрешение не получено', 'error');
-      return false;
-    }
-    
-    // 3. Получаем Service Worker
-    let reg = await navigator.serviceWorker.ready;
-    if (!reg) {
-      reg = await navigator.serviceWorker.register('/Lol-Test/firebase-messaging-sw.js', {
-        scope: '/Lol-Test/'
-      });
-      await navigator.serviceWorker.ready;
-    }
-    
-    // 4. Проверяем старую подписку и удаляем её
-    let oldSub = await reg.pushManager.getSubscription();
-    if (oldSub) {
-      await oldSub.unsubscribe();
-      console.log('✅ Старая подписка удалена');
-    }
-    
-    // 5. Создаём НОВУЮ подписку
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: firebaseConfig.vapidKey
-    });
-    
-    if (!sub || !sub.endpoint) {
-      showToast('❌ Не удалось создать подписку', 'error');
-      return false;
-    }
-    
-    console.log('✅ Подписка создана');
-    
-    // 6. Сохраняем в Firestore
-    const keys = sub.keys || { p256dh: '', auth: '' };
-    await db.collection('users').doc(me.uid).set({
-      pushEnabled: true,
-      pushSubscription: {
-        endpoint: sub.endpoint,
-        expirationTime: sub.expirationTime || null,
-        keys: {
-          p256dh: keys.p256dh || '',
-          auth: keys.auth || ''
-        }
-      },
-      pushUpdatedAt: now()
-    }, { merge: true });
-    
-    // 7. ПРИВЯЗЫВАЕМ EXTERNAL ID ЧЕРЕЗ API
-    const token = sub.endpoint.split('/').pop();
-    const ONESIGNAL_KEY = atob('b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=');
-    
-    const res = await fetch('https://api.onesignal.com/apps/f55c1b55-b383-4008-8072-8ba4382c6dac/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + ONESIGNAL_KEY
-      },
-      body: JSON.stringify({
-        subscriptions: [{
-          type: 'WebPush',
-          token: token,
-          enabled: true
-        }],
-        properties: {
-          external_user_id: me.uid
-        }
-      })
-    });
-    
-    const data = await res.json();
-    console.log('📊 Привязка:', data);
-    
-    if (res.ok) {
-      console.log('✅ External ID привязан');
-    } else {
-      console.warn('⚠️ Ошибка привязки:', data);
-    }
-    
-    // 8. Отправляем тестовый пуш
-    const test = await fetch('https://api.onesignal.com/notifications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + ONESIGNAL_KEY
-      },
-      body: JSON.stringify({
-        app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
-        include_external_user_ids: [me.uid],
-        headings: { en: '✅ Пуши работают!' },
-        contents: { en: 'Теперь вы будете получать уведомления о сообщениях' }
-      })
-    });
-    
-    if (test.ok) {
-      showToast('✅ Подписка успешна! Тестовый пуш отправлен.', 'success');
-    } else {
-      showToast('✅ Подписка создана, но тестовый пуш не отправлен.', 'info');
-    }
-    
-    // 9. Обновляем кнопку
-    const btn = document.getElementById('onesignalSubscribeBtn');
-    if (btn) {
-      btn.textContent = '🔔 Подписано ✅';
-      btn.style.background = 'rgba(34,197,94,0.15)';
-      btn.style.border = '1px solid #22c55e';
-      btn.disabled = true;
-    }
-    
-    // 10. Обновляем статус тумблера
-    await updatePushUI();
-    
-    return true;
-    
-  } catch (error) {
-    console.error('❌ Ошибка подписки:', error);
-    showToast('❌ Ошибка: ' + (error.message || 'неизвестная'), 'error');
-    return false;
-  }
-}
-});
-// ========================================================================
-// ПРИНУДИТЕЛЬНАЯ ПРИВЯЗКА EXTERNAL ID (С ОТОБРАЖЕНИЕМ ОШИБКИ НА ЭКРАНЕ)
-// ========================================================================
-
-document.getElementById('forceBindBtn').addEventListener('click', async () => {
-  try {
-    showToast('⏳ Привязка...', 'info');
-    
-    if (!me || !me.uid) {
-      showToast('❌ Пользователь не залогинен', 'error');
-      return;
-    }
-    
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.getSubscription();
-    
-    if (!subscription) {
-      showToast('❌ Нет подписки. Включите тумблер!', 'error');
-      return;
-    }
-    
-    const token = subscription.endpoint.split('/').pop();
-    console.log('📱 Токен:', token);
-    
-    const encodedKey = 'b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=';
-    const ONESIGNAL_KEY = atob(encodedKey);
-    
-    // Показываем, что отправляем
-    showToast('📤 Отправка запроса...', 'info');
-    
-    const response = await fetch('https://api.onesignal.com/apps/f55c1b55-b383-4008-8072-8ba4382c6dac/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + ONESIGNAL_KEY
-      },
-      body: JSON.stringify({
-        subscriptions: [
-          {
-            type: 'WebPush',
-            token: token,
-            enabled: true
-          }
-        ],
-        properties: {
-          external_user_id: me.uid
-        }
-      })
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok) {
-      showToast('✅ External ID привязан!', 'success');
-      
-      // Отправляем тестовый пуш
-      const testResponse = await fetch('https://api.onesignal.com/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + ONESIGNAL_KEY
-        },
-        body: JSON.stringify({
-          app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
-          include_external_user_ids: [me.uid],
-          headings: { en: '✅ Привязка успешна!' },
-          contents: { en: 'Теперь пуши будут работать!' }
-        })
-      });
-      
-      if (testResponse.ok) {
-        showToast('✅ Тестовый пуш отправлен! Проверьте телефон.', 'success');
-      } else {
-        showToast('❌ Тестовый пуш не отправлен', 'error');
-      }
-    } else {
-      // ПОКАЗЫВАЕМ ОШИБКУ НА ЭКРАНЕ
-      let errorText = 'Неизвестная ошибка';
-      if (result.errors) {
-        errorText = result.errors.join(', ');
-      } else if (result.message) {
-        errorText = result.message;
-      } else {
-        errorText = JSON.stringify(result);
-      }
-      showToast('❌ Ошибка: ' + errorText, 'error');
-      console.error('Полная ошибка:', result);
-    }
-    
-  } catch (error) {
-    showToast('❌ Ошибка: ' + error.message, 'error');
-    console.error('Ошибка:', error);
-  }
-});
-  // ========================================================================
-// СБРОС И ПЕРЕПОДПИСКА (НОВАЯ КНОПКА)
-// ========================================================================
-
-async function resetAndResubscribe() {
-  try {
-    showToast('🔄 Сброс подписки...', 'info');
-    
-    // 1. Получаем старую подписку
-    const reg = await navigator.serviceWorker.ready;
-    const oldSub = await reg.pushManager.getSubscription();
-    
-    // 2. Отписываемся
-    if (oldSub) {
-      await oldSub.unsubscribe();
-      console.log('✅ Старая подписка удалена');
-      showToast('✅ Старая подписка удалена', 'info');
-    }
-    
-    // 3. Создаём новую подписку
-    const newSub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: firebaseConfig.vapidKey
-    });
-    
-    if (!newSub || !newSub.keys || !newSub.keys.p256dh) {
-      showToast('❌ Не удалось создать подписку', 'error');
-      return;
-    }
-    
-    console.log('✅ Новая подписка создана');
-    
-    // 4. Сохраняем в Firestore
-    await db.collection('users').doc(me.uid).set({
-      pushEnabled: true,
-      pushSubscription: {
-        endpoint: newSub.endpoint,
-        expirationTime: newSub.expirationTime || null,
-        keys: {
-          p256dh: newSub.keys.p256dh,
-          auth: newSub.keys.auth
-        }
-      },
-      pushUpdatedAt: now()
-    }, { merge: true });
-    
-    console.log('✅ Сохранено в Firestore');
-    
-    // 5. Привязываем external_id
-    const token = newSub.endpoint.split('/').pop();
-    const ONESIGNAL_KEY = atob('b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=');
-    
-    const res = await fetch('https://api.onesignal.com/apps/f55c1b55-b383-4008-8072-8ba4382c6dac/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + ONESIGNAL_KEY
-      },
-      body: JSON.stringify({
-        subscriptions: [{
-          type: 'WebPush',
-          token: token,
-          enabled: true
-        }],
-        properties: {
-          external_user_id: me.uid
-        }
-      })
-    });
-    
-    const data = await res.json();
-    console.log('📊 Результат привязки:', data);
-    
-    if (res.ok) {
-      showToast('✅ Подписка обновлена и привязана!', 'success');
-      
-      // Отправляем тестовый пуш
-      const test = await fetch('https://api.onesignal.com/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + ONESIGNAL_KEY
-        },
-        body: JSON.stringify({
-          app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
-          include_external_user_ids: [me.uid],
-          headings: { en: '✅ Подписка работает!' },
-          contents: { en: 'Теперь пуши из мессенджера будут приходить' }
-        })
-      });
-      
-      if (test.ok) {
-        showToast('✅ Тестовый пуш отправлен! Проверьте телефон.', 'success');
-      }
-      
-      // Обновляем кнопки
-      const btn = document.getElementById('onesignalSubscribeBtn');
-      if (btn) {
-        btn.textContent = '🔔 Подписано ✅';
-        btn.style.background = 'rgba(34,197,94,0.15)';
-        btn.style.border = '1px solid #22c55e';
-      }
-      
-    } else {
-      const errMsg = data.errors ? data.errors.join(', ') : 'Неизвестная ошибка';
-      showToast('⚠️ Ошибка привязки: ' + errMsg, 'error');
-    }
-    
-  } catch (e) {
-    console.error('❌ Ошибка:', e);
-    showToast('❌ ' + e.message, 'error');
-  }
-}
-
-// Привязываем кнопку
-document.getElementById('resetSubBtn').addEventListener('click', resetAndResubscribe);
-  
 })();
