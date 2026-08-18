@@ -29,11 +29,23 @@
     await OneSignal.init({
       appId: "f55c1b55-b383-4008-8072-8ba4382c6dac",
       serviceWorkerPath: "/Lol-Test/OneSignalSDKWorker.js",
-      serviceWorkerScope: "/",
-      serviceWorkerAllowed: "/"
+      serviceWorkerScope: "/Lol-Test/",
     });
-    console.log('✅ OneSignal SDK инициализирован');
+    console.log('✅ OneSignal инициализирован с Scope: /Lol-Test/');
   });
+
+  // Регистрация Service Worker вручную
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/Lol-Test/OneSignalSDKWorker.js', {
+      scope: '/Lol-Test/'
+    })
+    .then(function(reg) {
+      console.log('✅ SW зарегистрирован с scope:', reg.scope);
+    })
+    .catch(function(err) {
+      console.log('❌ Ошибка SW:', err);
+    });
+  }
 </script>
   <!-- ===== КОНЕЦ ONESIGNAL SDK ===== -->
   
