@@ -1770,8 +1770,7 @@ if (!currentChatIsGroup && peer && peer.uid) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Basic os_v2_app_6vobwvntqnaaradsrosdqldnvqc67amzmhhelhmek3w6am45l7wyg6fv3gwbmt42nx6yux64jhnljazsnsey2f2cujwmrjqkhlbc56i'
-        },
+          'Authorization': 'Basic os_v2_app_6vobwvntqnaaradsrosdqldnvs3cntvqmene7kunxmqgn6nqr3e5tnvgcmudq5vcookgwakookiwk75pgfduc7vbvgxyoqxxrzk5zmq'
         body: JSON.stringify({
           app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
           include_external_user_ids: [peer.uid],
