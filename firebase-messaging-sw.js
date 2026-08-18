@@ -20,8 +20,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || 'Новое сообщение';
   const notificationOptions = {
     body: payload.notification?.body || '',
-    icon: '/logo192.png',
-    badge: '/logo192.png',
+    icon: '/logo192.png.JPEG',   // ПРАВИЛЬНОЕ ИМЯ ФАЙЛА
+    badge: '/logo192.png.JPEG',  // ПРАВИЛЬНОЕ ИМЯ ФАЙЛА
     data: payload.data || {},
     vibrate: [200, 100, 200]
   };
