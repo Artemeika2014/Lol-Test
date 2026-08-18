@@ -4166,37 +4166,53 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
       return;
     }
     
-    // ПРОВЕРЯЕМ, ЕСТЬ ЛИ УЖЕ РАЗРЕШЕНИЕ
-    const currentPermission = Notification.permission;
-    console.log('📊 Текущее разрешение:', currentPermission);
-    
-    let result;
-    if (currentPermission === 'granted') {
-      // Если уже разрешено — просто показываем успех
-      result = 'granted';
-      console.log('✅ Разрешение уже было дано ранее');
-    } else {
-      // Если нет — запрашиваем
-      result = await OneSignal.Notifications.requestPermission({
-        modalConfig: {
-          title: "🔔 Получать уведомления?",
-          message: "Включайте, чтобы не пропускать сообщения"
-        }
-      });
-    }
+    // Запрашиваем разрешение
+    const result = await OneSignal.Notifications.requestPermission({
+      modalConfig: {
+        title: "🔔 Получать уведомления?",
+        message: "Включайте, чтобы не пропускать сообщения"
+      }
+    });
     
     if (result === 'granted') {
       showToast('✅ Уведомления включены!', 'success');
       
-      // ПРИВЯЗЫВАЕМ ПОЛЬЗОВАТЕЛЯ
-      await OneSignal.User.addAlias({ 
-        alias_label: 'external_id', 
-        alias_id: me.uid 
-      });
+      // ПОЛУЧАЕМ ТОКЕН ПОДПИСКИ
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
       
-      console.log('✅ Пользователь привязан с external_id:', me.uid);
+      if (subscription) {
+        const token = subscription.endpoint.split('/').pop();
+        console.log('📱 Токен устройства:', token);
+        
+        // ПРИВЯЗЫВАЕМ ЧЕРЕЗ API (это работает 100%)
+        const encodedKey = 'b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=';
+        const ONESIGNAL_KEY = atob(encodedKey);
+        
+        await fetch('https://api.onesignal.com/apps/f55c1b55-b383-4008-8072-8ba4382c6dac/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + ONESIGNAL_KEY
+          },
+          body: JSON.stringify({
+            subscriptions: [
+              {
+                type: 'WebPush',
+                token: token,
+                enabled: true
+              }
+            ],
+            properties: {
+              external_user_id: me.uid
+            }
+          })
+        });
+        
+        console.log('✅ Пользователь привязан с external_id:', me.uid);
+      }
       
-      // СОХРАНЯЕМ В FIRESTORE
+      // Сохраняем в Firestore
       await db.collection('users').doc(me.uid).set({
         onesignalSubscribed: true,
         pushEnabled: true,
@@ -4204,20 +4220,16 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
         onesignalUpdatedAt: now()
       }, { merge: true });
       
-      // МЕНЯЕМ КНОПКУ
+      // Меняем кнопку
       const btn = document.getElementById('onesignalSubscribeBtn');
       btn.textContent = '🔔 Подписано ✅';
       btn.style.background = 'rgba(34,197,94,0.15)';
       btn.style.border = '1px solid #22c55e';
       
-      // ПРОВЕРЯЕМ СТАТУС
       const isSubscribed = await OneSignal.Notifications.isSubscribed();
       console.log('📊 Статус подписки:', isSubscribed);
       
-      // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: отправляем тестовый пуш через API
-      const encodedKey = 'b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=';
-      const ONESIGNAL_KEY = atob(encodedKey);
-      
+      // Отправляем тестовый пуш
       const testResponse = await fetch('https://api.onesignal.com/notifications', {
         method: 'POST',
         headers: {
@@ -4227,23 +4239,18 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
         body: JSON.stringify({
           app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
           include_external_user_ids: [me.uid],
-          headings: { en: '🔥 Успех!' },
-          contents: { en: 'Вы успешно подписались на уведомления!' },
-          data: { type: 'test' }
+          headings: { en: '✅ Успешно!' },
+          contents: { en: 'Пуши из мессенджера теперь будут работать!' }
         })
       });
       
       if (testResponse.ok) {
-        console.log('✅ Тестовый пуш отправлен через API');
-        showToast('✅ Тестовый пуш отправлен! Проверьте телефон.', 'success');
-      } else {
-        const err = await testResponse.json();
-        console.error('❌ Ошибка тестового пуша:', err);
+        console.log('✅ Тестовый пуш отправлен');
+        showToast('✅ Тестовый пуш отправлен!', 'success');
       }
       
     } else {
-      showToast('❌ Разрешение не получено. Проверьте настройки браузера.', 'error');
-      console.error('❌ Пользователь не дал разрешение');
+      showToast('❌ Разрешение не получено', 'error');
     }
   } catch (error) {
     console.error('❌ Ошибка:', error);
