@@ -1758,20 +1758,17 @@ async function sendMessage() {
   // Отправка пуша собеседнику
 // Отправка пуша через OneSignal
 // Отправка пуша через OneSignal (с закодированным ключом)
+// Отправка пуша через OneSignal
 if (!currentChatIsGroup && peer && peer.uid) {
   try {
     const userDoc = await db.collection('users').doc(peer.uid).get();
     const userData = userDoc.data();
-    const peerPushEnabled = userData.pushEnabled === true;
-    
-    if (peerPushEnabled) {
-      console.log('📨 Отправка пуша через OneSignal');
+    if (userData.pushEnabled) {
+      console.log('📨 Отправка пуша пользователю:', peer.uid);
       
-      // Закодированный ключ (GitHub не видит его как секрет)
-      const encodedKey = 'b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=';
-      const ONESIGNAL_KEY = atob(encodedKey);
+      const ONESIGNAL_KEY = atob('b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=');
       
-      const response = await fetch('https://api.onesignal.com/notifications', {
+      const res = await fetch('https://api.onesignal.com/notifications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1780,12 +1777,8 @@ if (!currentChatIsGroup && peer && peer.uid) {
         body: JSON.stringify({
           app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
           include_external_user_ids: [peer.uid],
-          headings: { 
-            en: me.nick || 'Новое сообщение' 
-          },
-          contents: { 
-            en: text || 'Сообщение' 
-          },
+          headings: { en: me.nick || 'Новое сообщение' },
+          contents: { en: text || 'Сообщение' },
           data: {
             chatId: currentChatId,
             senderId: me.uid,
@@ -1794,11 +1787,11 @@ if (!currentChatIsGroup && peer && peer.uid) {
         })
       });
       
-      if (response.ok) {
-        console.log('✅ Пуш отправлен через OneSignal');
+      if (res.ok) {
+        console.log('✅ Пуш отправлен');
       } else {
-        const errorData = await response.json();
-        console.error('❌ Ошибка OneSignal:', errorData);
+        const err = await res.json();
+        console.error('❌ Ошибка:', err);
       }
     }
   } catch (e) {
