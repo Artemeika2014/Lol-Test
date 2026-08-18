@@ -4313,33 +4313,34 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
   }
 });
 // ========================================================================
-// ПРИНУДИТЕЛЬНАЯ ПРИВЯЗКА EXTERNAL ID (С ПОДРОБНОЙ ОШИБКОЙ)
+// ПРИНУДИТЕЛЬНАЯ ПРИВЯЗКА EXTERNAL ID (С ОТОБРАЖЕНИЕМ ОШИБКИ НА ЭКРАНЕ)
 // ========================================================================
 
 document.getElementById('forceBindBtn').addEventListener('click', async () => {
   try {
-    console.log('🔗 Принудительная привязка...');
+    showToast('⏳ Привязка...', 'info');
     
     if (!me || !me.uid) {
       showToast('❌ Пользователь не залогинен', 'error');
       return;
     }
     
-    // Получаем подписку
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
     
     if (!subscription) {
-      showToast('❌ Нет активной подписки. Сначала включите тумблер.', 'error');
+      showToast('❌ Нет подписки. Включите тумблер!', 'error');
       return;
     }
     
     const token = subscription.endpoint.split('/').pop();
     console.log('📱 Токен:', token);
     
-    // Привязываем через API
     const encodedKey = 'b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=';
     const ONESIGNAL_KEY = atob(encodedKey);
+    
+    // Показываем, что отправляем
+    showToast('📤 Отправка запроса...', 'info');
     
     const response = await fetch('https://api.onesignal.com/apps/f55c1b55-b383-4008-8072-8ba4382c6dac/users', {
       method: 'POST',
@@ -4362,7 +4363,6 @@ document.getElementById('forceBindBtn').addEventListener('click', async () => {
     });
     
     const result = await response.json();
-    console.log('📊 Полный ответ:', JSON.stringify(result, null, 2));
     
     if (response.ok) {
       showToast('✅ External ID привязан!', 'success');
@@ -4385,20 +4385,25 @@ document.getElementById('forceBindBtn').addEventListener('click', async () => {
       if (testResponse.ok) {
         showToast('✅ Тестовый пуш отправлен! Проверьте телефон.', 'success');
       } else {
-        const testError = await testResponse.json();
-        console.error('❌ Ошибка тестового пуша:', testError);
-        showToast('❌ Ошибка тестового пуша', 'error');
+        showToast('❌ Тестовый пуш не отправлен', 'error');
       }
     } else {
-      // Показываем полную ошибку
-      console.error('❌ Полная ошибка привязки:', result);
-      const errorMsg = result.errors ? result.errors.join(', ') : JSON.stringify(result);
-      showToast('❌ Ошибка привязки: ' + errorMsg, 'error');
+      // ПОКАЗЫВАЕМ ОШИБКУ НА ЭКРАНЕ
+      let errorText = 'Неизвестная ошибка';
+      if (result.errors) {
+        errorText = result.errors.join(', ');
+      } else if (result.message) {
+        errorText = result.message;
+      } else {
+        errorText = JSON.stringify(result);
+      }
+      showToast('❌ Ошибка: ' + errorText, 'error');
+      console.error('Полная ошибка:', result);
     }
     
   } catch (error) {
-    console.error('❌ Ошибка:', error);
     showToast('❌ Ошибка: ' + error.message, 'error');
+    console.error('Ошибка:', error);
   }
 });
   
