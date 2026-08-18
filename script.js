@@ -4312,5 +4312,88 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
     showToast('❌ Ошибка: ' + error.message, 'error');
   }
 });
+  // ========================================================================
+// ПРИНУДИТЕЛЬНАЯ ПРИВЯЗКА EXTERNAL ID
+// ========================================================================
+
+document.getElementById('forceBindBtn').addEventListener('click', async () => {
+  try {
+    console.log('🔗 Принудительная привязка...');
+    
+    if (!me || !me.uid) {
+      showToast('❌ Пользователь не залогинен', 'error');
+      return;
+    }
+    
+    // Получаем подписку
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    
+    if (!subscription) {
+      showToast('❌ Нет активной подписки. Сначала включите тумблер.', 'error');
+      return;
+    }
+    
+    const token = subscription.endpoint.split('/').pop();
+    console.log('📱 Токен:', token);
+    
+    // Привязываем через API
+    const encodedKey = 'b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=';
+    const ONESIGNAL_KEY = atob(encodedKey);
+    
+    const response = await fetch('https://api.onesignal.com/apps/f55c1b55-b383-4008-8072-8ba4382c6dac/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ' + ONESIGNAL_KEY
+      },
+      body: JSON.stringify({
+        subscriptions: [
+          {
+            type: 'WebPush',
+            token: token,
+            enabled: true
+          }
+        ],
+        properties: {
+          external_user_id: me.uid
+        }
+      })
+    });
+    
+    const result = await response.json();
+    console.log('📊 Результат:', result);
+    
+    if (response.ok) {
+      showToast('✅ External ID привязан!', 'success');
+      
+      // Отправляем тестовый пуш
+      const testResponse = await fetch('https://api.onesignal.com/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + ONESIGNAL_KEY
+        },
+        body: JSON.stringify({
+          app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
+          include_external_user_ids: [me.uid],
+          headings: { en: '✅ Привязка успешна!' },
+          contents: { en: 'Теперь пуши будут работать!' }
+        })
+      });
+      
+      if (testResponse.ok) {
+        showToast('✅ Тестовый пуш отправлен! Проверьте телефон.', 'success');
+      }
+    } else {
+      showToast('❌ Ошибка привязки: ' + (result.errors || 'неизвестная ошибка'), 'error');
+      console.error('❌ Ошибка:', result);
+    }
+    
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    showToast('❌ Ошибка: ' + error.message, 'error');
+  }
+});
   
 })();
