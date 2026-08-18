@@ -4312,8 +4312,8 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
     showToast('❌ Ошибка: ' + error.message, 'error');
   }
 });
-  // ========================================================================
-// ПРИНУДИТЕЛЬНАЯ ПРИВЯЗКА EXTERNAL ID
+// ========================================================================
+// ПРИНУДИТЕЛЬНАЯ ПРИВЯЗКА EXTERNAL ID (С ПОДРОБНОЙ ОШИБКОЙ)
 // ========================================================================
 
 document.getElementById('forceBindBtn').addEventListener('click', async () => {
@@ -4362,7 +4362,7 @@ document.getElementById('forceBindBtn').addEventListener('click', async () => {
     });
     
     const result = await response.json();
-    console.log('📊 Результат:', result);
+    console.log('📊 Полный ответ:', JSON.stringify(result, null, 2));
     
     if (response.ok) {
       showToast('✅ External ID привязан!', 'success');
@@ -4384,10 +4384,16 @@ document.getElementById('forceBindBtn').addEventListener('click', async () => {
       
       if (testResponse.ok) {
         showToast('✅ Тестовый пуш отправлен! Проверьте телефон.', 'success');
+      } else {
+        const testError = await testResponse.json();
+        console.error('❌ Ошибка тестового пуша:', testError);
+        showToast('❌ Ошибка тестового пуша', 'error');
       }
     } else {
-      showToast('❌ Ошибка привязки: ' + (result.errors || 'неизвестная ошибка'), 'error');
-      console.error('❌ Ошибка:', result);
+      // Показываем полную ошибку
+      console.error('❌ Полная ошибка привязки:', result);
+      const errorMsg = result.errors ? result.errors.join(', ') : JSON.stringify(result);
+      showToast('❌ Ошибка привязки: ' + errorMsg, 'error');
     }
     
   } catch (error) {
