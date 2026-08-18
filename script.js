@@ -3953,7 +3953,7 @@ async function subscribeToPush() {
 
     let registration;
     try {
-      const swPath = '/Lol-test/firebase-messaging-sw.js';
+      const swPath = '/Lol-Test/firebase-messaging-sw.js';
       registration = await navigator.serviceWorker.register(swPath);
       console.log('✅ SW зарегистрирован по пути:', swPath);
     } catch (swError) {
