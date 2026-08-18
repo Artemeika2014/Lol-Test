@@ -24,7 +24,7 @@ const CLOUDINARY = {
 };
 
 // ========================================================================
-// HELPERS
+// HELPER FUNCTIONS
 // ========================================================================
 const $ = (id) => document.getElementById(id);
 const now = () => Date.now();
