@@ -3978,11 +3978,21 @@ async function subscribeToPush() {
 
     console.log('✅ Подписка создана:', subscription);
 
-    await db.collection('users').doc(me.uid).set({
-      pushSubscription: subscription,
-      pushEnabled: true,
-      pushUpdatedAt: now()
-    }, { merge: true });
+    // Сохраняем ТОЛЬКО нужные поля из подписки
+const subscriptionData = {
+  endpoint: subscription.endpoint,
+  expirationTime: subscription.expirationTime || null,
+  keys: {
+    p256dh: subscription.keys.p256dh || '',
+    auth: subscription.keys.auth || ''
+  }
+};
+
+await db.collection('users').doc(me.uid).set({
+  pushSubscription: subscriptionData,
+  pushEnabled: true,
+  pushUpdatedAt: now()
+}, { merge: true });
 
     showToast('✅ Уведомления включены!', 'success');
     await updatePushUI();
