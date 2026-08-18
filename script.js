@@ -4089,7 +4089,7 @@ async function checkPushStatus() {
 // Проверка Service Worker при загрузке
 async function checkServiceWorker() {
   try {
-    const swPath = '/Lol-test/firebase-messaging-sw.js';
+    const swPath = '/Lol-Test/firebase-messaging-sw.js';
     const registration = await navigator.serviceWorker.getRegistration(swPath);
     
     if (registration) {
