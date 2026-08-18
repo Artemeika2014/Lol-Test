@@ -3979,12 +3979,15 @@ async function subscribeToPush() {
     console.log('✅ Подписка создана:', subscription);
 
     // Сохраняем ТОЛЬКО нужные поля из подписки
+// Проверяем, есть ли ключи
+const keys = subscription.keys || { p256dh: '', auth: '' };
+
 const subscriptionData = {
-  endpoint: subscription.endpoint,
+  endpoint: subscription.endpoint || '',
   expirationTime: subscription.expirationTime || null,
   keys: {
-    p256dh: subscription.keys.p256dh || '',
-    auth: subscription.keys.auth || ''
+    p256dh: keys.p256dh || '',
+    auth: keys.auth || ''
   }
 };
 
