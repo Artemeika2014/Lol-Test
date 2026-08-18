@@ -20,6 +20,27 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-messaging-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.min.js"></script>
+
+  <!-- ===== ONESIGNAL SDK ===== -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "f55c1b55-b383-4008-8072-8ba4382c6dac",
+        safari_web_id: "web.onesignal.auto.12345",
+        notifyButton: {
+          enable: true,
+          position: 'bottom-right',
+          theme: 'inverse',
+          size: 'medium'
+        }
+      });
+      console.log('✅ OneSignal SDK инициализирован');
+    });
+  </script>
+  <!-- ===== КОНЕЦ ONESIGNAL SDK ===== -->
+  
 </head>
 <body>
 <div class="app">
@@ -129,6 +150,9 @@
         <button id="creatorBtn" class="template-btn hidden" style="width:100%; border-radius:50px;" type="button">🔨 Стать создателем</button>
         <div style="height:10px"></div>
         <button id="lolPlayerBtn" class="template-btn" style="width:100%; border-radius:50px; margin-top:10px; background: rgba(139,92,246,0.15); border: 1px solid #8b5cf6;" type="button">🎵 LoL Player</button>
+        <button id="onesignalSubscribeBtn" class="template-btn" style="width:100%; border-radius:50px; margin-top:10px; background: rgba(43,134,255,0.15); border: 1px solid #2b86ff;" type="button">
+  🔔 Подписаться на пуши (OneSignal)
+</button>
         
         <!-- ===== PUSH УВЕДОМЛЕНИЯ ===== -->
         <div style="margin-top: 16px; padding: 16px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
