@@ -3981,24 +3981,35 @@ async function subscribeToPush() {
       return false;
     }
 
-    const permission = await Notification.requestPermission();
+    // Проверяем, есть ли уже разрешение
+    if (Notification.permission === 'denied') {
+      showToast('❌ Уведомления заблокированы в настройках браузера', 'error');
+      return false;
+    }
+
+    let permission = Notification.permission;
+    if (permission !== 'granted') {
+      permission = await Notification.requestPermission();
+    }
+    
     if (permission !== 'granted') {
       showToast('❌ Разрешение не получено', 'error');
       return false;
     }
 
+    // Регистрируем Service Worker
     let registration;
-try {
-  const swPath = '/Lol-Test/firebase-messaging-sw.js';
-  registration = await navigator.serviceWorker.register(swPath, {
-    scope: '/Lol-Test/'
-  });
-  console.log('✅ SW зарегистрирован по пути:', swPath, 'с scope:', '/Lol-Test/');
-} catch (swError) {
-  console.error('Ошибка регистрации SW:', swError);
-  showToast('❌ Ошибка регистрации Service Worker', 'error');
-  return false;
-}
+    try {
+      const swPath = '/Lol-Test/firebase-messaging-sw.js';
+      registration = await navigator.serviceWorker.register(swPath, {
+        scope: '/Lol-Test/'
+      });
+      console.log('✅ SW зарегистрирован по пути:', swPath);
+    } catch (swError) {
+      console.error('Ошибка регистрации SW:', swError);
+      showToast('❌ Ошибка регистрации Service Worker', 'error');
+      return false;
+    }
 
     await navigator.serviceWorker.ready;
 
@@ -4011,24 +4022,54 @@ try {
 
     console.log('✅ Подписка создана:', subscription);
 
-    // Сохраняем ТОЛЬКО нужные поля из подписки
-// Проверяем, есть ли ключи
-const keys = subscription.keys || { p256dh: '', auth: '' };
+    // Проверяем, есть ли ключи
+    const keys = subscription.keys || { p256dh: '', auth: '' };
 
-const subscriptionData = {
-  endpoint: subscription.endpoint || '',
-  expirationTime: subscription.expirationTime || null,
-  keys: {
-    p256dh: keys.p256dh || '',
-    auth: keys.auth || ''
-  }
-};
+    const subscriptionData = {
+      endpoint: subscription.endpoint || '',
+      expirationTime: subscription.expirationTime || null,
+      keys: {
+        p256dh: keys.p256dh || '',
+        auth: keys.auth || ''
+      }
+    };
 
-await db.collection('users').doc(me.uid).set({
-  pushSubscription: subscriptionData,
-  pushEnabled: true,
-  pushUpdatedAt: now()
-}, { merge: true });
+    await db.collection('users').doc(me.uid).set({
+      pushSubscription: subscriptionData,
+      pushEnabled: true,
+      pushUpdatedAt: now()
+    }, { merge: true });
+
+    // 🔥 ПРИВЯЗЫВАЕМ EXTERNAL ID ДЛЯ ONESIGNAL
+    try {
+      const token = subscription.endpoint.split('/').pop();
+      const encodedKey = 'b3NfdjJfYXBwXzZ2b2J3dm50cW5hYXJhZHNyb3NkcWxkbnZyajY1NXZseXM2dXJobWl3bm9ndHRxZmtqc3JyNGl6Nmt2M2NoYmI1d3l0dzJ5N3Fmc3R4cmpwZHZ3d3pibW9vcnR4emJhZHV6Nm1seHk=';
+      const ONESIGNAL_KEY = atob(encodedKey);
+      
+      await fetch('https://api.onesignal.com/apps/f55c1b55-b383-4008-8072-8ba4382c6dac/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + ONESIGNAL_KEY
+        },
+        body: JSON.stringify({
+          subscriptions: [
+            {
+              type: 'WebPush',
+              token: token,
+              enabled: true
+            }
+          ],
+          properties: {
+            external_user_id: me.uid
+          }
+        })
+      });
+      console.log('✅ External ID привязан в OneSignal');
+    } catch (e) {
+      console.error('⚠️ Ошибка привязки OneSignal:', e);
+      // Не прерываем выполнение
+    }
 
     showToast('✅ Уведомления включены!', 'success');
     await updatePushUI();
