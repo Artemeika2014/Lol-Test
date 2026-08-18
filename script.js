@@ -4154,3 +4154,56 @@ window.matchMedia('(display-mode: standalone)').addEventListener('change', updat
     if (e.target === this) closeEditTrackModal();
   });
 })();
+// ========================================================================
+// ONESIGNAL КНОПКА ПОДПИСКИ
+// ========================================================================
+
+document.getElementById('onesignalSubscribeBtn').addEventListener('click', async () => {
+  try {
+    console.log('🔔 Нажата кнопка OneSignal');
+    
+    if (typeof OneSignal === 'undefined') {
+      showToast('⏳ OneSignal загружается...', 'info');
+      return;
+    }
+    
+    const result = await OneSignal.Notifications.requestPermission({
+      modalConfig: {
+        title: "🔔 Получать уведомления?",
+        message: "Включайте, чтобы не пропускать сообщения"
+      }
+    });
+    
+    if (result === 'granted') {
+      showToast('✅ Уведомления включены!', 'success');
+      
+      await OneSignal.User.addAlias({ 
+        alias_label: 'external_id', 
+        alias_id: me.uid 
+      });
+      
+      await db.collection('users').doc(me.uid).set({
+        onesignalSubscribed: true,
+        pushEnabled: true,
+        onesignalId: me.uid,
+        onesignalUpdatedAt: now()
+      }, { merge: true });
+      
+      const btn = document.getElementById('onesignalSubscribeBtn');
+      btn.textContent = '🔔 Подписано ✅';
+      btn.style.background = 'rgba(34,197,94,0.15)';
+      btn.style.border = '1px solid #22c55e';
+      
+      const isSubscribed = await OneSignal.Notifications.isSubscribed();
+      console.log('📊 Статус:', isSubscribed);
+      
+    } else {
+      showToast('❌ Разрешение не получено', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    showToast('❌ Ошибка: ' + error.message, 'error');
+  }
+});
+
+</script>
