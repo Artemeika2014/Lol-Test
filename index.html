@@ -22,37 +22,37 @@
   <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.min.js"></script>
 
   <!-- ===== ONESIGNAL SDK ===== -->
-    <script>
-  // Регистрируем Service Worker вручную (как мы сделали в консоли)
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/Lol-Test/OneSignalSDKWorker.js', {
-      scope: '/Lol-Test/'
-    })
-    .then(function(registration) {
-      console.log('✅ SW зарегистрирован с scope:', registration.scope);
-      
-      // После регистрации загружаем OneSignal SDK
-      const script = document.createElement('script');
-      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
-      script.defer = true;
-      document.head.appendChild(script);
-      
-      // Настраиваем OneSignal после загрузки
-      script.onload = function() {
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(async function(OneSignal) {
-          await OneSignal.init({
-            appId: "f55c1b55-b383-4008-8072-8ba4382c6dac",
-            serviceWorkerRegistration: registration // Используем готовую регистрацию
-          });
-          console.log('✅ OneSignal SDK инициализирован с готовым SW');
+<script>
+// Регистрируем Service Worker вручную с правильным scope
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/Lol-Test/OneSignalSDKWorker.js', {
+    scope: '/Lol-Test/'
+  })
+  .then(function(registration) {
+    console.log('✅ SW зарегистрирован с scope:', registration.scope);
+    
+    // Загружаем OneSignal SDK
+    const script = document.createElement('script');
+    script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+    script.defer = true;
+    document.head.appendChild(script);
+    
+    script.onload = function() {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "f55c1b55-b383-4008-8072-8ba4382c6dac",
+          serviceWorkerRegistration: registration,
+          serviceWorkerScope: "/Lol-Test/" // ДОБАВЛЯЕМ ЭТУ СТРОКУ
         });
-      };
-    })
-    .catch(function(error) {
-      console.error('❌ Ошибка регистрации SW:', error);
-    });
-  }
+        console.log('✅ OneSignal SDK инициализирован с готовым SW');
+      });
+    };
+  })
+  .catch(function(error) {
+    console.error('❌ Ошибка регистрации SW:', error);
+  });
+}
 </script>
   <!-- ===== КОНЕЦ ONESIGNAL SDK ===== -->
   
