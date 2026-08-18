@@ -27,7 +27,10 @@
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
-      appId: "f55c1b55-b383-4008-8072-8ba4382c6dac"
+      appId: "f55c1b55-b383-4008-8072-8ba4382c6dac",
+      serviceWorkerPath: "/Lol-Test/OneSignalSDKWorker.js",
+      serviceWorkerScope: "/",
+      serviceWorkerAllowed: "/"
     });
     console.log('✅ OneSignal SDK инициализирован');
   });
