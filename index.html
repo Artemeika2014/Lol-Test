@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>LOL Messenger ULTRA + LoL Player v9.1</title>
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="https://iili.io/BWMNdRs.jpg">
+  <link rel="apple-touch-icon" sizes="152x152" href="https://iili.io/BWMNdRs.jpg">
+  <link rel="apple-touch-icon" sizes="167x167" href="https://iili.io/BWMNdRs.jpg">
+  <link rel="apple-touch-icon" sizes="120x120" href="https://iili.io/BWMNdRs.jpg">
+
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-messaging-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- AUTH SCREEN -->
+  <section id="scr-auth" class="screen active">
+    <div class="brand">
+      <img src="https://iili.io/BWM0dg4.md.png" alt="LOL Messenger">
+    </div>
+    <div class="subtitle">Вход / Регистрация</div>
+    <div class="authCard glass">
+      <div class="auth-tabbar" id="authTabbar"><div class="auth-pill" id="authPill"></div><button class="auth-tab active" data-auth-i="0">Вход</button><button class="auth-tab" data-auth-i="1">Регистрация</button></div>
+      <div id="authMsg" class="hidden"></div>
+      <div class="field"><label>Логин</label><input id="loginLogin" class="template-input" placeholder="например: l0l_user" autocomplete="username" /></div>
+      <div class="field"><label>Пароль</label><input id="loginPass" type="password" class="template-input" placeholder="••••••••" autocomplete="current-password" /></div>
+      <div id="regExtra" class="hidden">
+        <div class="avatarPick"><img id="regAvatarPreview" class="avatar med" alt=""><div style="flex:1"><div class="hint" style="font-weight:1100;margin-bottom:6px;">Аватар</div><input id="regAvatarFile" type="file" accept="image/*" style="width:100%;padding:10px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted);" /></div></div>
+        <div class="field"><label>Никнейм</label><input id="regNick" class="template-input" placeholder="как тебя будут видеть" autocomplete="nickname" /></div>
+        <div class="field"><label>Номер телефона</label><input id="regPhone" class="template-input" placeholder="+7 900 000-00-00" inputmode="tel" autocomplete="tel" /></div>
+      </div>
+      <button id="authBtn" class="template-btn" type="button">Войти</button>
+      <div class="hint" style="margin-top:10px;">* Вход по логину/паролю</div>
+    </div>
+  </section>
+
+  <!-- CHATS SCREEN -->
+  <section id="scr-chats" class="screen">
+    <div class="topbar"><h1>Чаты</h1><div style="display:flex; gap:10px;"><button id="createGroupBtn" class="circle-btn" type="button" title="Создать группу">+</button><button id="btnLogout" class="circle-btn" type="button" title="Выйти">⎋</button></div></div>
+    <div id="openSearch" class="searchpill">🔍 Поиск по никнейму</div>
+    <div class="banner"><p class="bannerTitle">LOL Messenger v9.1</p><p class="bannerText">✅ Верификация (✓) | Статусы видны рядом с ником | Стикеры: 📎 | Двойной клик по сообщению - меню | Сообщения >30 дней удаляются (кроме важных) | 🎵 Отправляйте музыку! | 🔔 Push-уведомления в профиле</p></div>
+    <div id="chatList" class="list"></div>
+  </section>
+
+  <!-- SEARCH SCREEN -->
+  <section id="scr-search" class="screen">
+    <div class="searchTop">
+      <div class="searchField">
+        🔎<input id="searchInput" placeholder="Поиск по никнейму..." autocomplete="off" />
+        <button id="clearSearchBtn" class="clear-search-btn" title="Очистить">✕</button>
+      </div>
+      <div id="cancelSearch" class="cancel">Отмена</div>
+    </div>
+    <div class="searchList">
+      <div class="sectionTitle" id="searchSectionTitle">👥 Пользователи</div>
+      <div id="searchResultsContainer" class="search-results-container"></div>
+      <div id="searchEmpty" class="search-empty hidden">👤 Начните вводить никнейм...</div>
+    </div>
+  </section>
+
+  <!-- CHAT SCREEN -->
+  <section id="scr-chat" class="screen">
+    <div class="chatWrap">
+      <div class="chatTop"><div id="backToChats" class="backBtn">‹</div><div class="chatHead" id="openGroupInfoBtn"><img id="peerAvatar" class="avatar" alt=""><div class="chatMeta"><div id="peerNick" class="chatName">Чат</div><div id="peerStatus" class="chatStatus">…</div></div></div><div class="chat-actions" id="chatActions"></div><button id="exitChat" class="circle-btn" type="button" title="Выйти из чата">⤬</button></div>
+      <div id="msgList" class="msgs"></div>
+    </div>
+    <div class="composer" id="composer">
+      <div class="composerInput">
+        <button class="action-btn" id="attachBtn" style="width:auto; padding:0 10px;" title="Прикрепить">📎</button>
+        <input id="msgInput" class="template-input" placeholder="Сообщение" style="flex:1; margin:0;" />
+        <button class="action-btn" id="giftBtn" style="width:auto; padding:0 10px;" onclick="showGiftModal()">🎁</button>
+        <button class="action-btn" id="creatorGiftBtn" style="width:auto; padding:0 10px; display:none;" onclick="showCreatorGiftModal()">🎁➕</button>
+      </div>
+      <button id="sendBtn" class="template-btn sendBtn" type="button" title="Отправить" style="width:auto; padding:12px 20px;">➤</button>
+    </div>
+  </section>
+
+  <!-- ATTACH MENU -->
+  <div class="attach-menu" id="attachMenu">
+    <button onclick="openStickerPanel()">😊 Стикеры</button>
+    <button onclick="openMusicPicker()">🎵 Музыка</button>
+    <button id="verifyUserBtn" style="display:none;" onclick="verifyUser()">✓ Верификация</button>
+  </div>
+
+  <!-- STICKER PANEL -->
+  <div id="stickerPanel" class="sticker-panel">
+    <div class="sticker-header"><h4>📱 Мои стикеры</h4><button class="close-sticker-btn" id="closeStickerBtn">✕</button></div>
+    <div id="stickerList" class="sticker-list"></div>
+  </div>
+
+  <!-- MUSIC PICKER MODAL -->
+  <div id="musicPickerModal" class="modal hidden">
+    <div class="modal-content" style="max-width:450px; max-height:80vh; overflow-y:auto;">
+      <h3>🎵 Выберите музыку</h3>
+      <div id="musicPickerList" style="margin-top:16px;"></div>
+      <div class="modal-buttons">
+        <button class="modal-btn cancel" onclick="closeMusicPicker()">❌ Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE SCREEN -->
+  <section id="scr-profile" class="screen">
+    <div class="profilePad">
+      <div class="topbar" style="padding:0 2px 10px; padding-top:0;"><h1>Профиль</h1><button id="btnLogout2" class="circle-btn" type="button" title="Выйти">⎋</button></div>
+      <div class="profileCard glass">
+        <div class="profileHead"><img id="meAvatar" class="avatar big" alt=""><div style="flex:1; min-width:0;"><h2 id="meNick" class="pName">…</h2><div id="mePhone" class="pSub">…</div><div id="meLogin" class="pSub" style="opacity:.85;"></div></div></div>
+        <div style="height:12px"></div>
+        <button id="balanceBtn" class="template-btn" style="width:100%; border-radius:50px; gap:8px; font-size:16px;" type="button">🤣 <span id="balanceDisplay">0</span> LOL</button>
+        <div style="height:10px"></div>
+        <div class="avatarPick" style="margin:0 0 10px;"><img id="editAvatarPreview" class="avatar med" alt=""><div style="flex:1"><div class="hint" style="font-weight:1100;margin-bottom:6px;">Сменить аватар</div><input id="editAvatarFile" type="file" accept="image/*" style="width:100%;padding:10px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted);" /></div></div>
+        <div class="field"><label>Никнейм</label><input id="editNick" class="template-input" /></div>
+        <div class="field"><label>Номер телефона</label><input id="editPhone" class="template-input" /></div>
+        <button id="saveProfileBtn" class="template-btn" style="width:100%; border-radius:50px;" type="button">Сохранить</button>
+        <div style="height:10px"></div>
+        <button id="aboutBtn" class="template-btn" style="width:100%; border-radius:50px;" type="button">❓ Что за мессенджер?</button>
+        <div style="height:10px"></div>
+        <button id="creatorBtn" class="template-btn hidden" style="width:100%; border-radius:50px;" type="button">🔨 Стать создателем</button>
+        <div style="height:10px"></div>
+        <button id="lolPlayerBtn" class="template-btn" style="width:100%; border-radius:50px; margin-top:10px; background: rgba(139,92,246,0.15); border: 1px solid #8b5cf6;" type="button">🎵 LoL Player</button>
+        
+        <!-- ===== PUSH УВЕДОМЛЕНИЯ ===== -->
+        <div style="margin-top: 16px; padding: 16px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                🔔 Push-уведомления
+                <span id="pushStatusBadge" style="font-size: 11px; background: rgba(255,255,255,0.1); padding: 2px 10px; border-radius: 20px; color: var(--muted2);">Выкл</span>
+              </div>
+              <div id="pushStatusText" style="font-size: 13px; color: var(--muted2); margin-top: 2px;">Включите, чтобы получать уведомления о сообщениях</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="pushToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div id="pwaInstallMessage" style="margin-top: 12px; padding: 10px 14px; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.25); border-radius: 12px; font-size: 13px; color: #fbbf24; display: none;">
+            📱 <strong>Установите PWA</strong> — нажмите "Добавить на экран Домой" в браузере, чтобы получать push-уведомления в фоне.
+          </div>
+        </div>
+        <!-- ===== КОНЕЦ PUSH УВЕДОМЛЕНИЙ ===== -->
+
+        <div style="height:10px"></div>
+        <button id="resetDeviceBtn" class="template-btn" style="width:100%; border-radius:50px;" type="button">Сбросить устройство</button>
+        <div id="profileMsg" class="hidden" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BALANCE SCREEN -->
+  <section id="scr-balance" class="screen">
+    <div class="balance-header">
+      <div class="balance-back" id="balanceBackBtn">←</div>
+      <div class="balance-title">
+        <span style="color: #2b86ff;">L</span><span style="color: #a78bfa;">o</span><span style="color: #2b86ff;">l</span>
+        <span class="coin-text">Коин</span>
+      </div>
+    </div>
+    <div class="balance-card"><div class="shop-header"><h3>🛒 Магазин</h3><button id="addItemBtn" class="creator-action-btn" style="display:none;" onclick="showAddItemModal()">➕ Добавить статус</button></div><div id="shopItems" class="shop-grid"></div></div>
+    <div class="balance-card" style="margin:20px 0;"><div style="display:flex; align-items:center; justify-content:center; gap:20px;"><span class="balance-amount"><span>🤣</span> <span id="balanceAmount">0</span></span><button id="addBalanceBtn" class="creator-action-btn" style="display:none;">➕</button></div></div>
+    <div class="promo-section"><h3 style="margin-bottom:20px;">🎫 Промокод</h3><div style="display:flex; gap:10px;"><input type="text" id="promoCode" class="template-input" placeholder="Введите промокод" style="flex:1;"><button class="template-btn" onclick="activatePromo()" style="width:auto;">Активировать</button></div><div id="creatorPromoSection" style="margin-top:20px; display:none;"><button class="creator-action-btn" onclick="showCreatePromoModal()">➕ Создать промо</button><div class="promo-stats" id="promoStats"><h4>Статистика промокодов</h4><div id="promoStatsList"></div></div></div></div>
+    <div class="sell-section" id="sellSection"><h3 style="margin-bottom:20px;">💰 Продать статус</h3><div id="sellItems"></div><div id="sellTotal" class="sell-total">Выбрано: 0 статусов на сумму 0 🤣</div><button class="template-btn sell-btn" id="sellBtn" onclick="sellSelected()" disabled>ПРОДАТЬ</button></div>
+    <div class="status-selector"><h3 style="margin-bottom:20px;">✨ Выбрать статус</h3><select id="statusSelect" onchange="changeStatus()"><option value="">🚫 Нет статуса</option></select></div>
+  </section>
+
+  <!-- GROUP CREATE SCREEN -->
+  <section id="scr-group-create" class="screen">
+    <div class="group-header"><div class="group-back" id="groupCreateBack">←</div><h2 style="margin:0">Создание группы</h2></div>
+    <div id="groupStep1"><button id="startGroupCreateBtn" class="template-btn" style="width:100%; margin-bottom:20px;">➕ Создать группу (beta)</button><div id="groupMembersList"></div><button id="groupNextBtn" class="template-btn" style="display:none; margin-top:20px;">Далее →</button></div>
+    <div id="groupStep2" style="display:none;"><div class="avatarPick" style="justify-content:center; margin-bottom:20px;"><img id="groupAvatarPreview" class="avatar big" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%232b86ff'/%3E%3Ctext x='50' y='65' font-size='40' text-anchor='middle' fill='white'%3E👥%3C/text%3E%3C/svg%3E"><input id="groupAvatarFile" type="file" accept="image/*" style="display:none;"><button class="template-btn" onclick="document.getElementById('groupAvatarFile').click()">Выбрать аватар</button></div><div class="field"><label>Название группы</label><input id="groupName" class="template-input" placeholder="Название"></div><div class="field"><label>Описание</label><textarea id="groupDesc" class="template-input" rows="3" placeholder="Описание группы"></textarea></div><button id="groupFinishBtn" class="template-btn">✅ Готово</button><button id="groupStep2Back" class="template-btn" style="margin-top:10px;">← Назад</button></div>
+  </section>
+
+  <!-- GROUP INFO SCREEN -->
+  <section id="scr-group-info" class="screen">
+    <div class="group-header"><div class="group-back" id="groupInfoBack">←</div><h2 style="margin:0">Информация</h2><button id="groupEditInfoBtn" class="group-edit-btn" style="margin-left:auto;">✏️</button></div>
+    <div id="groupInfoContent"></div>
+  </section>
+
+  <!-- ABOUT SCREEN -->
+  <section id="scr-about" class="screen">
+    <div class="about-header">
+      <div class="about-back" id="aboutBackBtn">←</div>
+      <h2 class="about-title">
+        <span style="color: #2b86ff;">L</span><span style="color: #a78bfa;">o</span><span style="color: #2b86ff;">l</span> Messenger
+      </h2>
+    </div>
+    <div class="feature-grid"><div class="feature-card"><div class="feature-icon">💬</div><div class="feature-name">Групповые чаты</div><div class="feature-desc">Создавай группы с друзьями</div></div><div class="feature-card"><div class="feature-icon">👥</div><div class="feature-name">Управление участниками</div><div class="feature-desc">Удаляй участников, добавляй новых</div></div><div class="feature-card"><div class="feature-icon">🔒</div><div class="feature-name">Права доступа</div><div class="feature-desc">Настраивай кто может писать и редактировать</div></div><div class="feature-card"><div class="feature-icon">⚡</div><div class="feature-name">Мгновенно</div><div class="feature-desc">Всё работает в реальном времени</div></div><div class="feature-card"><div class="feature-icon">😊</div><div class="feature-name">Стикеры</div><div class="feature-desc">Создавай и делись своими стикерами</div></div><div class="feature-card"><div class="feature-icon">✨</div><div class="feature-name">Видимые статусы</div><div class="feature-desc">Статусы отображаются рядом с ником</div></div><div class="feature-card"><div class="feature-icon">⭐</div><div class="feature-name">Важные сообщения</div><div class="feature-desc">Отмечай важные сообщения, они не удаляются</div></div><div class="feature-card"><div class="feature-icon">🗑️</div><div class="feature-name">Автоудаление</div><div class="feature-desc">Сообщения >30 дней удаляются (кроме важных)</div></div><div class="feature-card"><div class="feature-icon">🎵</div><div class="feature-name">LoL Player</div><div class="feature-desc">Слушай и отправляй музыку в чатах</div></div><div class="feature-card"><div class="feature-icon">✓</div><div class="feature-name">Верификация</div><div class="feature-desc">Синяя ✓ для пользователей, фиолетовая ✓ для создателей, белая ✓ для групп</div></div></div>
+    <div style="margin:24px 0; text-align:center;"><span class="tech-badge">🔥 Firebase</span><span class="tech-badge">💨 Firestore</span><span class="tech-badge">🔐 SHA-256</span><span class="tech-badge">📱 PWA ready</span><span class="tech-badge">😊 Стикеры</span><span class="tech-badge">✨ Статусы</span><span class="tech-badge">⭐ Важные</span><span class="tech-badge">📅 Даты</span><span class="tech-badge">🗑️ Автоудаление</span><span class="tech-badge">🎵 LoL Player</span><span class="tech-badge">✓ Верификация v9.1</span><span class="tech-badge">🔔 Push</span></div>
+    <div class="about-footer"><p>Версия 9.1 (2026)</p><p style="font-size:12px;">Создано с ❤️ для LOL Messenger</p></div>
+  </section>
+
+  <!-- PLAYER SCREEN -->
+  <section id="scr-player" class="screen">
+    <div class="topbar" style="padding:14px 16px 10px; padding-top:max(14px, env(safe-area-inset-top));">
+      <button id="playerBackBtn" class="backBtn">‹</button>
+      <h1 style="margin:0; font-size:24px; flex:1; text-align:center; background:linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">🎵 LoL Player</h1>
+      <button id="addMusicBtn" class="circle-btn" style="font-size:24px;" title="Добавить музыку">+</button>
+    </div>
+    <div class="player-container">
+      <div id="trackListContainer">
+        <div class="player-empty">
+          <div class="spinner" style="display:inline-block; width:30px; height:30px; border:3px solid rgba(255,255,255,0.1); border-radius:50%; border-top-color:#3b82f6; animation:spin 1s ease-in-out infinite;"></div>
+          <p style="margin-top:12px;">Загрузка музыки...</p>
+        </div>
+      </div>
+
+      <div class="player-widget" id="playerWidget">
+        <div class="player-top">
+          <div class="player-cover" id="playerCover">
+            <span style="color:rgba(255,255,255,0.3); font-size:12px;">🎵</span>
+          </div>
+          <div class="player-info">
+            <div class="title" id="playerTitle">Нет трека</div>
+            <div class="artist" id="playerArtist">—</div>
+          </div>
+        </div>
+        <div class="player-controls">
+          <button onclick="prevTrack()">⏮</button>
+          <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+          <button onclick="nextTrack()">⏭</button>
+        </div>
+        <input type="range" class="player-slider" id="timeSlider" min="0" max="0" value="0" oninput="seekTrack(this.value)">
+        <div class="time-info">
+          <span id="currentTime">0:00</span>
+          <span id="totalTime">0:00</span>
+        </div>
+        <div class="speed-control">
+          <label>Скорость</label>
+          <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="changeSpeed(this.value)">
+          <span class="speed-value" id="speedValue">1.0x</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NAVIGATION -->
+  <nav id="bottomNav" class="nav hidden">
+    <div class="wrapper">
+      <div class="main-tabbar" id="mainTabbar">
+        <div class="main-pill" id="mainPill"></div>
+        <button class="main-tab active" data-main-tab="chats"><div>💬</div><div style="font-size:12px">Чаты</div></button>
+        <button class="main-tab" data-main-tab="profile"><div>👤</div><div style="font-size:12px">Профиль</div></button>
+      </div>
+      <div id="searchButton" class="search-btn">🔎</div>
+    </div>
+  </nav>
+
+  <!-- MODALS -->
+  <div id="muteModal" class="modal hidden"><div class="modal-content"><h3>На сколько минут заглушить?</h3><input type="number" id="muteMinutes" min="1" value="5"><div class="modal-buttons"><button class="modal-btn confirm" onclick="confirmMute()">✅</button><button class="modal-btn cancel" onclick="hideMuteModal()">❌</button></div></div></div>
+  <div id="giftModal" class="modal hidden"><div class="modal-content"><h3>🎁 Подарок</h3><select id="giftType" style="width:100%; margin-bottom:16px;"><option value="coins">🤣 LOL коины</option></select><div id="giftCoinsInput"><input type="number" id="giftCoins" placeholder="Количество коинов" min="1"></div><div class="modal-buttons"><button class="modal-btn confirm" onclick="confirmGift()">🎁 Подарить</button><button class="modal-btn cancel" onclick="hideGiftModal()">❌</button></div></div></div>
+  <div id="creatorGiftModal" class="modal hidden"><div class="modal-content"><h3>🎁➕ Отправить коины</h3><input type="number" id="creatorGiftCoins" placeholder="Количество коинов" min="1"><div class="modal-buttons"><button class="modal-btn confirm" onclick="confirmCreatorGift()">💰 Отправить</button><button class="modal-btn cancel" onclick="hideCreatorGiftModal()">❌</button></div></div></div>
+  <div id="createPromoModal" class="modal hidden"><div class="modal-content"><h3>➕ Создать промокод</h3><input type="text" id="promoCodeInput" placeholder="Код промокода"><input type="number" id="promoAmount" placeholder="Количество коинов"><div style="margin:16px 0;"><label style="display:flex; align-items:center; gap:10px; margin-bottom:8px;"><input type="radio" name="promoType" value="date" checked onchange="togglePromoType()"> 📅 По дате</label><label style="display:flex; align-items:center; gap:10px;"><input type="radio" name="promoType" value="count" onchange="togglePromoType()"> 🔢 По количеству</label></div><div id="promoDateField"><input type="date" id="promoDate" style="width:100%;"><small style="color:var(--muted);">Промокод активен до этой даты</small></div><div id="promoCountField" style="display:none;"><input type="number" id="promoActivations" placeholder="Количество активаций" min="1"><small style="color:var(--muted);">Сколько раз можно активировать</small></div><div class="modal-buttons" style="margin-top:20px;"><button class="modal-btn confirm" onclick="createPromo()">✅ Создать</button><button class="modal-btn cancel" onclick="hideCreatePromoModal()">❌ Отмена</button></div></div></div>
+  <div id="addItemModal" class="modal hidden"><div class="modal-content"><h3>➕ Добавить статус</h3><div style="margin-bottom:16px;"><label style="display:block; margin-bottom:8px;">Тип:</label><select id="itemIconType" onchange="toggleItemIconInput()"><option value="emoji">😊 Эмодзи</option><option value="image">🖼️ Изображение</option></select></div><div id="itemEmojiField"><input type="text" id="itemEmoji" placeholder="Введите эмодзи (например ⭐️)" maxlength="2"></div><div id="itemImageField" style="display:none;"><input type="file" id="itemImage" accept="image/*"><small style="color:var(--muted);">Загрузите изображение для статуса</small></div><input type="text" id="itemName" placeholder="Название статуса (необязательно)"><input type="number" id="itemPrice" placeholder="Рыночная цена" min="1"><div style="margin:16px 0;"><label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="itemLimited" onchange="toggleItemLimited()"> Лимитированный</label></div><div id="itemDateField" style="display:none;"><input type="date" id="itemExpiryDate"><small style="color:var(--muted);">Доступен для покупки до этой даты</small></div><div class="modal-buttons" style="margin-top:20px;"><button class="modal-btn confirm" onclick="createItem()">✅ Создать</button><button class="modal-btn cancel" onclick="hideAddItemModal()">❌ Отмена</button></div></div></div>
+  <div id="editItemModal" class="modal hidden"><div class="modal-content"><h3>✏️ Редактировать статус</h3><input type="hidden" id="editItemId"><div style="margin-bottom:16px;"><label style="display:block; margin-bottom:8px;">Тип:</label><select id="editIconType" onchange="toggleEditIconInput()"><option value="emoji">😊 Эмодзи</option><option value="image">🖼️ Изображение</option></select></div><div id="editEmojiField"><input type="text" id="editEmoji" placeholder="Введите эмодзи" maxlength="2"></div><div id="editImageField" style="display:none;"><input type="file" id="editImage" accept="image/*"><small style="color:var(--muted);">Оставьте пустым, чтобы не менять</small></div><input type="text" id="editName" placeholder="Название статуса"><input type="number" id="editPrice" placeholder="Рыночная цена" min="1"><div style="margin:16px 0;"><label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="editLimited" onchange="toggleEditLimited()"> Лимитированный</label></div><div id="editDateField" style="display:none;"><input type="date" id="editExpiryDate"><small style="color:var(--muted);">Доступен для покупки до этой даты</small></div><div class="modal-buttons" style="margin-top:20px;"><button class="modal-btn confirm" onclick="saveItem()">✅ Сохранить</button><button class="modal-btn cancel" onclick="hideEditItemModal()">❌ Отмена</button></div></div></div>
+  <div id="addBalanceModal" class="modal hidden"><div class="modal-content"><h3>➕ Пополнить баланс</h3><input type="number" id="addBalanceAmount" placeholder="Сколько добавить?" min="1"><div class="modal-buttons"><button class="modal-btn confirm" onclick="addBalance()">💰 Пополнить</button><button class="modal-btn cancel" onclick="hideAddBalanceModal()">❌</button></div></div></div>
+  <div id="editTrackModal" class="modal hidden"><div class="modal-content" style="max-width:400px;"><h3>✏️ Редактировать трек</h3><input type="hidden" id="editTrackId"><div style="text-align:center; margin:12px 0;"><div id="editTrackCover" style="width:100px; height:100px; border-radius:16px; margin:0 auto; overflow:hidden; background:linear-gradient(135deg, #3b82f6, #8b5cf6); display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer; border:2px dashed rgba(255,255,255,0.15);">🎵</div><input type="file" id="editTrackCoverInput" accept="image/*" style="display:none;" onchange="loadEditCover(event)"><button class="template-btn" style="margin-top:8px; padding:4px 12px; font-size:12px;" onclick="document.getElementById('editTrackCoverInput').click()">Изменить обложку</button></div><div class="field"><label>Название</label><input type="text" id="editTrackTitle" class="template-input"></div><div class="field"><label>Исполнитель</label><input type="text" id="editTrackArtist" class="template-input"></div><div class="modal-buttons"><button class="modal-btn cancel" onclick="closeEditTrackModal()">❌ Отмена</button><button class="modal-btn confirm" onclick="saveTrackEdit()">✅ Сохранить</button></div></div></div>
+  <div id="contactEditorModal" class="modal hidden"><div class="modal-content contact-editor-modal"><h3 id="contactEditorTitle">Редактировать контакт</h3><img id="contactEditorAvatar" class="contact-editor-avatar" src="" alt="avatar" style="cursor:pointer;"><div id="contactEditorStatus" style="text-align:center; margin-bottom:16px;"></div><div class="field"><label>Локальный никнейм</label><input type="text" id="contactEditorNick" class="template-input" placeholder="Введите свой вариант ника"></div><div class="field"><label>Локальный аватар</label><input type="file" id="contactEditorAvatarFile" accept="image/*" class="template-input"></div><div class="modal-buttons"><button class="modal-btn confirm" id="saveContactBtn">✅ Сохранить</button><button class="modal-btn reset-contact-btn" id="resetContactBtn">🔄 Вернуть оригинал</button><button class="modal-btn cancel" onclick="hideContactEditor()">❌ Отмена</button></div></div></div>
+
+  <!-- ADD MEMBER MODAL -->
+  <div id="addMemberModal" class="modal hidden">
+    <div class="modal-content" style="max-width:400px;">
+      <h3>➕ Добавить участников</h3>
+      <input type="text" id="addMemberSearch" class="template-input" placeholder="Поиск по никнейму..." style="margin-bottom:10px;">
+      <div id="addMemberList" style="max-height:300px; overflow-y:auto;"></div>
+      <div class="modal-buttons">
+        <button class="modal-btn confirm" onclick="confirmAddMembers()">✅ Добавить</button>
+        <button class="modal-btn cancel" onclick="hideAddMemberModal()">❌ Отмена</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="script.js"></script>
+</body>
+</html>
