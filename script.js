@@ -1770,7 +1770,7 @@ if (!currentChatIsGroup && peer && peer.uid) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + process.env.ONESIGNAL_API_KEY
+          'Authorization': 'Basic os_v2_app_6vobwvntqnaaradsrosdqldnvqc67amzmhhelhmek3w6am45l7wyg6fv3gwbmt42nx6yux64jhnljazsnsey2f2cujwmrjqkhlbc56i'
         },
         body: JSON.stringify({
           app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
