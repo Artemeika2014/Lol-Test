@@ -1756,19 +1756,65 @@ async function sendMessage() {
   await clearMyTyping();
   
   // Отправка пуша собеседнику
-  if (!currentChatIsGroup && peer && peer.uid) {
-    try {
-      const userDoc = await db.collection("users").doc(peer.uid).get();
-      const userData = userDoc.data();
-      const peerPushEnabled = userData.pushEnabled === true;
-      if (peerPushEnabled) {
-        console.log('📨 Отправка пуша пользователю:', peer.uid);
-        // Здесь будет вызов твоего API для отправки
+if (!currentChatIsGroup && peer && peer.uid) {
+  try {
+    const userDoc = await db.collection('users').doc(peer.uid).get();
+    const userData = userDoc.data();
+    const peerPushEnabled = userData.pushEnabled === true;
+    
+    if (peerPushEnabled && userData.pushSubscription) {
+      console.log('📨 Отправка пуша пользователю:', peer.uid);
+      
+      // Получаем подписку из базы
+      const subscription = userData.pushSubscription;
+      
+      // Создаём payload для пуша
+      const payload = JSON.stringify({
+        title: me.nick || 'Новое сообщение',
+        body: text || 'Сообщение',
+        icon: '/logo192.png.JPEG',
+        badge: '/logo192.png.JPEG',
+        data: {
+          click_action: '/',
+          chatId: currentChatId,
+          senderId: me.uid,
+          senderName: me.nick
+        }
+      });
+      
+      // Отправляем пуш через Firebase
+      const response = await fetch('https://fcm.googleapis.com/v1/projects/lol-messenger-76286/messages:send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + await getFirebaseToken()
+        },
+        body: JSON.stringify({
+          message: {
+            token: subscription.endpoint.split('/').pop(), // Извлекаем токен из endpoint
+            notification: {
+              title: me.nick || 'Новое сообщение',
+              body: text || 'Сообщение'
+            },
+            webpush: {
+              fcm_options: {
+                link: '/'
+              }
+            }
+          }
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Пуш отправлен');
+      } else {
+        console.error('❌ Ошибка отправки:', await response.text());
       }
-    } catch (e) {
-      console.error('Ошибка отправки пуша:', e);
     }
+  } catch (e) {
+    console.error('Ошибка отправки пуша:', e);
   }
+}
 }
 
 $("sendBtn").addEventListener("click", sendMessage);
