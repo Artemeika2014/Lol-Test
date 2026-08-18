@@ -4204,6 +4204,4 @@ document.getElementById('onesignalSubscribeBtn').addEventListener('click', async
     console.error('❌ Ошибка:', error);
     showToast('❌ Ошибка: ' + error.message, 'error');
   }
-});
-
-</script>
+})();
