@@ -1756,59 +1756,44 @@ async function sendMessage() {
   await clearMyTyping();
   
   // Отправка пуша собеседнику
+// Отправка пуша через OneSignal
 if (!currentChatIsGroup && peer && peer.uid) {
   try {
     const userDoc = await db.collection('users').doc(peer.uid).get();
     const userData = userDoc.data();
     const peerPushEnabled = userData.pushEnabled === true;
     
-    if (peerPushEnabled && userData.pushSubscription) {
-      console.log('📨 Отправка пуша пользователю:', peer.uid);
+    if (peerPushEnabled) {
+      console.log('📨 Отправка пуша через OneSignal');
       
-      // Получаем подписку из базы
-      const subscription = userData.pushSubscription;
-      
-      // Создаём payload для пуша
-      const payload = JSON.stringify({
-        title: me.nick || 'Новое сообщение',
-        body: text || 'Сообщение',
-        icon: '/logo192.png.JPEG',
-        badge: '/logo192.png.JPEG',
-        data: {
-          click_action: '/',
-          chatId: currentChatId,
-          senderId: me.uid,
-          senderName: me.nick
-        }
-      });
-      
-      // Отправляем пуш через Firebase
-      const response = await fetch('https://fcm.googleapis.com/v1/projects/lol-messenger-76286/messages:send', {
+      const response = await fetch('https://api.onesignal.com/notifications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + await getFirebaseToken()
+          'Authorization': 'Basic ' + process.env.ONESIGNAL_API_KEY
         },
         body: JSON.stringify({
-          message: {
-            token: subscription.endpoint.split('/').pop(), // Извлекаем токен из endpoint
-            notification: {
-              title: me.nick || 'Новое сообщение',
-              body: text || 'Сообщение'
-            },
-            webpush: {
-              fcm_options: {
-                link: '/'
-              }
-            }
+          app_id: 'f55c1b55-b383-4008-8072-8ba4382c6dac',
+          include_external_user_ids: [peer.uid],
+          headings: { 
+            en: me.nick || 'Новое сообщение' 
+          },
+          contents: { 
+            en: text || 'Сообщение' 
+          },
+          data: {
+            chatId: currentChatId,
+            senderId: me.uid,
+            senderName: me.nick
           }
         })
       });
       
       if (response.ok) {
-        console.log('✅ Пуш отправлен');
+        console.log('✅ Пуш отправлен через OneSignal');
       } else {
-        console.error('❌ Ошибка отправки:', await response.text());
+        const errorData = await response.json();
+        console.error('❌ Ошибка OneSignal:', errorData);
       }
     }
   } catch (e) {
