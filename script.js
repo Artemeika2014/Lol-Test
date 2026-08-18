@@ -3952,20 +3952,17 @@ async function subscribeToPush() {
     }
 
     let registration;
-    try {
-      const swPath = '/Lol-Test/firebase-messaging-sw.js';
-      registration = await navigator.serviceWorker.register(swPath);
-      console.log('✅ SW зарегистрирован по пути:', swPath);
-    } catch (swError) {
-      console.error('Ошибка регистрации SW:', swError);
-      try {
-        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        console.log('✅ SW зарегистрирован по пути: /firebase-messaging-sw.js');
-      } catch (err2) {
-        showToast('❌ Ошибка регистрации Service Worker', 'error');
-        return false;
-      }
-    }
+try {
+  const swPath = '/Lol-Test/firebase-messaging-sw.js';
+  registration = await navigator.serviceWorker.register(swPath, {
+    scope: '/Lol-Test/'
+  });
+  console.log('✅ SW зарегистрирован по пути:', swPath, 'с scope:', '/Lol-Test/');
+} catch (swError) {
+  console.error('Ошибка регистрации SW:', swError);
+  showToast('❌ Ошибка регистрации Service Worker', 'error');
+  return false;
+}
 
     await navigator.serviceWorker.ready;
 
